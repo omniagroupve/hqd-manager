@@ -16,14 +16,13 @@ export default function AnimatedNumber({ value, prefix = '', suffix = '', decima
   useEffect(() => {
     const start = ref.current
     const end = value
-    const duration = 600
+    const duration = 800
     const startTime = performance.now()
 
     function tick(now: number) {
       const progress = Math.min((now - startTime) / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      const current = start + (end - start) * eased
-      setDisplay(current)
+      const eased = 1 - Math.pow(1 - progress, 4)
+      setDisplay(start + (end - start) * eased)
       if (progress < 1) frame.current = requestAnimationFrame(tick)
       else ref.current = end
     }
@@ -32,9 +31,10 @@ export default function AnimatedNumber({ value, prefix = '', suffix = '', decima
     return () => cancelAnimationFrame(frame.current)
   }, [value])
 
-  return (
-    <span className={className}>
-      {prefix}{display.toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}
-    </span>
-  )
+  const formatted = display.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+
+  return <span className={className}>{prefix}{formatted}{suffix}</span>
 }

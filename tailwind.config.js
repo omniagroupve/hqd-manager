@@ -4,8 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        app: '#080811',
-        surface: '#12121f',
+        app: '#06060f',
+        surface: '#111120',
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'system-ui', 'sans-serif'],
+      },
+      letterSpacing: {
+        tightest: '-0.04em',
+        tighter:  '-0.03em',
+        tight:    '-0.02em',
       },
     },
   },
