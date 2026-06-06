@@ -7,6 +7,17 @@ export interface Account {
   type: 'bank' | 'cash' | 'crypto'
 }
 
+export interface AccountTransaction {
+  id: string
+  accountId: string
+  type: 'credit' | 'debit'
+  amount: number           // siempre positivo
+  description: string      // ej: "Venta Lush Ice x2", "Gasto: Insumos"
+  refType?: 'sale' | 'expense' | 'transfer' | 'payable' | 'receivable' | 'manual'
+  refId?: string
+  createdAt: string
+}
+
 export interface AccountTransfer {
   id: string
   fromAccountId: string
@@ -24,8 +35,14 @@ export interface InventoryItem {
 }
 
 export interface CustomName {
-  id: string        // flavorId or productId
+  id: string
   name: string
+}
+
+export interface CustomPrice {
+  id: string        // productId
+  price: number     // precio de venta por unidad
+  cost?: number     // costo de compra (para margen)
 }
 
 export type ClientTag = 'vip' | 'mayorista' | 'detal' | 'frecuente' | 'nuevo' | 'deudor'
@@ -35,7 +52,7 @@ export interface Client {
   name: string
   phone?: string
   instagram?: string
-  zone?: string           // zona/sector
+  zone?: string
   tags: ClientTag[]
   emoji: string
   notes?: string
@@ -56,7 +73,7 @@ export interface Sale {
   saleType: 'retail' | 'wholesale'
   paymentMethod: PaymentMethod
   accountId?: string
-  clientId?: string       // linked customer
+  clientId?: string
   note?: string
   createdAt: string
   weekCloseId?: string
@@ -82,13 +99,14 @@ export interface Payable {
   status: 'pending' | 'partial' | 'paid'
   paidAmount: number
   accountId?: string
-  reminderDays: number   // days before due to remind
+  reminderDays: number
   createdAt: string
 }
 
 export interface Receivable {
   id: string
   clientName: string
+  clientId?: string
   description: string
   amountUSD: number
   dueDate: string
@@ -113,10 +131,12 @@ export interface WeekClose {
 
 export interface AppState {
   accounts: Account[]
+  accountTransactions: AccountTransaction[]
   transfers: AccountTransfer[]
   clients: Client[]
   inventory: InventoryItem[]
   customNames: CustomName[]
+  customPrices: CustomPrice[]
   sales: Sale[]
   expenses: Expense[]
   payables: Payable[]

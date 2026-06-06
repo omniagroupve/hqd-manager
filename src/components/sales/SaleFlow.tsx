@@ -34,9 +34,9 @@ export default function SaleFlow() {
   const [clientSearch, setClientSearch] = useState('')
   const [newClientName, setNewClientName] = useState('')
 
-  const { addSale, binanceRate, getStock, accounts, getCustomName, clients, addClient } = useAppStore()
+  const { addSale, binanceRate, getStock, accounts, getCustomName, getCustomPrice, clients, addClient } = useAppStore()
 
-  const price   = customPrice ? parseFloat(customPrice) : product?.priceUSD ?? 0
+  const price   = customPrice ? parseFloat(customPrice) : (product ? getCustomPrice(product.id) : 0)
   const priceBs = binanceRate > 0 ? price * binanceRate : 0
   const total   = price * qty
   const totalBs = priceBs * qty
@@ -133,7 +133,7 @@ export default function SaleFlow() {
                       {p.emoji}
                     </div>
                     <p className="text-sm font-semibold text-white leading-tight">{customName}</p>
-                    <p className="text-xs text-gray-500 mt-1 num">${p.priceUSD}</p>
+                    <p className="text-xs text-gray-500 mt-1 num">${getCustomPrice(p.id)}</p>
                   </motion.button>
                 )
               })}
@@ -209,7 +209,7 @@ export default function SaleFlow() {
             <div className="card-surface rounded-2xl px-4 py-3 mb-3 flex items-center gap-2">
               <span className="text-gray-500 text-sm">Precio/u</span>
               <span className="text-gray-400 text-sm">$</span>
-              <input type="number" inputMode="decimal" placeholder={String(product.priceUSD)}
+              <input type="number" inputMode="decimal" placeholder={String(getCustomPrice(product.id))}
                 value={customPrice} onChange={e => setCustomPrice(e.target.value)}
                 className="flex-1 bg-transparent text-white font-bold text-lg outline-none num" />
               {customPrice && <button onClick={() => setCustomPrice('')} className="text-xs text-gray-600">↩</button>}

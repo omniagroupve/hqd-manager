@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../../stores/appStore'
-import { Plus, ArrowLeftRight, Trash2, X, ChevronDown } from 'lucide-react'
-import { isAfter, differenceInDays, parseISO } from 'date-fns'
+import { Plus, ArrowLeftRight, Trash2, X, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
+import { isAfter, differenceInDays, parseISO, format } from 'date-fns'
+import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import AnimatedNumber from '../dashboard/AnimatedNumber'
 
@@ -146,54 +147,133 @@ export default function MoneyScreen() {
 
 // ── ACCOUNT CARD ─────────────────────────────────
 function AccountCard({ account: a }: { account: any }) {
-  const { updateAccount, deleteAccount, creditAccount } = useAppStore()
-  const [editing, setEditing]   = useState(false)
-  const [name, setName]         = useState(a.name)
+  const { updateAccount, deleteAccount, creditAccount, debitAccount, getAccountTransactions } = useAppStore()
+  const [editing, setEditing]     = useState(false)
+  const [name, setName]           = useState(a.name)
   const [adjAmount, setAdjAmount] = useState('')
-  const [showAdj, setShowAdj]   = useState(false)
+  const [showAdj, setShowAdj]     = useState(false)
+  const [showTx, setShowTx]       = useState(false)
+
+  const transactions = getAccountTransactions(a.id)
+  const todayCredits = transactions.filter(t => t.type==='credit' && t.createdAt.startsWith(new Date().toISOString().slice(0,10)))
+    .reduce((s,t) => s+t.amount, 0)
+  const todayDebits  = transactions.filter(t => t.type==='debit' && t.createdAt.startsWith(new Date().toISOString().slice(0,10)))
+    .reduce((s,t) => s+t.amount, 0)
 
   return (
-    <div className="card-surface rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-xl">{a.emoji}</span>
-          {editing ? (
-            <input value={name} onChange={e => setName(e.target.value)} autoFocus
-              onBlur={() => { updateAccount(a.id,{name}); setEditing(false) }}
-              onKeyDown={e => e.key==='Enter' && (updateAccount(a.id,{name}), setEditing(false))}
-              className="flex-1 bg-white/10 text-white text-sm font-semibold px-2 py-1 rounded-lg border border-violet-500/50 outline-none" />
-          ) : (
-            <button onClick={() => setEditing(true)} className="text-sm font-semibold text-white text-left">{a.name}</button>
-          )}
+    <div className="card-surface rounded-2xl overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xl">{a.emoji}</span>
+            {editing ? (
+              <input value={name} onChange={e => setName(e.target.value)} autoFocus
+                onBlur={() => { updateAccount(a.id,{name}); setEditing(false) }}
+                onKeyDown={e => e.key==='Enter' && (updateAccount(a.id,{name}), setEditing(false))}
+                className="flex-1 bg-white/10 text-white text-sm font-semibold px-2 py-1 rounded-lg border border-violet-500/50 outline-none" />
+            ) : (
+              <button onClick={() => setEditing(true)} className="text-sm font-semibold text-white text-left">{a.name}</button>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-base font-black text-white num">
+              {a.currency==='Bs' ? `Bs ${a.balance.toLocaleString('es-VE',{maximumFractionDigits:0})}` : `$${a.balance.toFixed(2)}`}
+            </p>
+            <p className="text-[10px] text-gray-500">{a.currency} · {a.type}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-base font-black text-white num">
-            {a.currency==='Bs' ? `Bs ${a.balance.toLocaleString('es-VE',{maximumFractionDigits:0})}` : `$${a.balance.toFixed(2)}`}
-          </p>
-          <p className="text-[10px] text-gray-500">{a.currency}</p>
+
+        {/* Today summary */}
+        {(todayCredits > 0 || todayDebits > 0) && (
+          <div className="flex gap-2 mb-3">
+            {todayCredits > 0 && (
+              <div className="flex items-center gap-1 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
+                <TrendingUp className="w-3 h-3 text-emerald-400" />
+                <span className="text-xs font-semibold text-emerald-400 num">+{a.currency==='Bs'?'Bs ':' $'}{todayCredits.toFixed(0)}</span>
+                <span className="text-[10px] text-gray-500">hoy</span>
+              </div>
+            )}
+            {todayDebits > 0 && (
+              <div className="flex items-center gap-1 bg-red-500/10 rounded-xl px-2.5 py-1.5">
+                <TrendingDown className="w-3 h-3 text-red-400" />
+                <span className="text-xs font-semibold text-red-400 num">-{a.currency==='Bs'?'Bs ':' $'}{todayDebits.toFixed(0)}</span>
+                <span className="text-[10px] text-gray-500">hoy</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={() => setShowAdj(!showAdj)}
+            className="flex-1 text-xs text-gray-400 bg-white/5 rounded-xl py-1.5 flex items-center justify-center gap-1">
+            Ajustar <ChevronDown className={`w-3 h-3 transition-transform ${showAdj?'rotate-180':''}`} />
+          </button>
+          <button onClick={() => setShowTx(!showTx)}
+            className={`flex-1 text-xs rounded-xl py-1.5 flex items-center justify-center gap-1 transition-all ${showTx?'bg-violet-600/30 text-violet-300 border border-violet-500/30':'bg-white/5 text-gray-400'}`}>
+            Movimientos <span className="text-[10px] opacity-60">({transactions.length})</span>
+          </button>
+          <button onClick={() => { if(confirm(`¿Eliminar ${a.name}?`)) deleteAccount(a.id) }}
+            className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center">
+            <Trash2 className="w-3 h-3 text-red-400" />
+          </button>
         </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => setShowAdj(!showAdj)}
-          className="flex-1 text-xs text-gray-400 bg-white/5 rounded-xl py-1.5 flex items-center justify-center gap-1">
-          Ajustar <ChevronDown className={`w-3 h-3 transition-transform ${showAdj?'rotate-180':''}`} />
-        </button>
-        <button onClick={() => { if(confirm(`¿Eliminar ${a.name}?`)) deleteAccount(a.id) }}
-          className="w-7 h-7 rounded-xl bg-red-500/10 flex items-center justify-center">
-          <Trash2 className="w-3 h-3 text-red-400" />
-        </button>
-      </div>
+
+      {/* Adjust */}
       <AnimatePresence>
         {showAdj && (
           <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} className="overflow-hidden">
-            <div className="flex gap-2 mt-2">
+            <div className="px-4 pb-4 flex gap-2 border-t border-white/5 pt-3">
               <input type="number" inputMode="decimal" placeholder="Monto" value={adjAmount}
                 onChange={e => setAdjAmount(e.target.value)}
                 className="flex-1 bg-white/5 text-white text-sm px-3 py-2 rounded-xl border border-white/10 outline-none" />
-              <button onClick={() => { const v=parseFloat(adjAmount); if(!isNaN(v)){ creditAccount(a.id,v); setAdjAmount(''); setShowAdj(false); toast.success(`+${v} a ${a.name}`) }}}
-                className="px-3 bg-violet-600 text-white text-sm font-bold rounded-xl">+</button>
-              <button onClick={() => { const v=parseFloat(adjAmount); if(!isNaN(v)){ creditAccount(a.id,-v); setAdjAmount(''); setShowAdj(false); toast.success(`-${v} de ${a.name}`) }}}
-                className="px-3 bg-red-600/70 text-white text-sm font-bold rounded-xl">−</button>
+              <button onClick={() => {
+                const v=parseFloat(adjAmount); if(!isNaN(v) && v>0) {
+                  creditAccount(a.id, v, 'Ajuste manual +', 'manual')
+                  setAdjAmount(''); setShowAdj(false)
+                  toast.success(`✅ +${v} ${a.currency} a ${a.name}`)
+                }
+              }} className="px-3 bg-violet-600 text-white text-sm font-bold rounded-xl">+</button>
+              <button onClick={() => {
+                const v=parseFloat(adjAmount); if(!isNaN(v) && v>0) {
+                  debitAccount(a.id, v, 'Ajuste manual −', 'manual')
+                  setAdjAmount(''); setShowAdj(false)
+                  toast.success(`✅ −${v} ${a.currency} de ${a.name}`)
+                }
+              }} className="px-3 bg-red-600/70 text-white text-sm font-bold rounded-xl">−</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Transaction history */}
+      <AnimatePresence>
+        {showTx && (
+          <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} className="overflow-hidden">
+            <div className="border-t border-white/5 px-4 py-3 space-y-0.5 max-h-64 overflow-y-auto">
+              <p className="text-caption text-gray-600 mb-2">ÚLTIMOS MOVIMIENTOS</p>
+              {transactions.length === 0 && (
+                <p className="text-xs text-gray-600 text-center py-3">Sin movimientos aún</p>
+              )}
+              {transactions.map(tx => (
+                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-white/4 last:border-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${tx.type==='credit'?'bg-emerald-500/20':'bg-red-500/20'}`}>
+                      {tx.type==='credit'
+                        ? <TrendingUp className="w-2.5 h-2.5 text-emerald-400" />
+                        : <TrendingDown className="w-2.5 h-2.5 text-red-400" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-300 truncate">{tx.description}</p>
+                      <p className="text-[10px] text-gray-600">{format(parseISO(tx.createdAt),'d MMM, HH:mm',{locale:es})}</p>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold num shrink-0 ml-2 ${tx.type==='credit'?'text-emerald-400':'text-red-400'}`}>
+                    {tx.type==='credit'?'+':'−'}
+                    {a.currency==='Bs'?`Bs ${tx.amount.toFixed(0)}`:`$${tx.amount.toFixed(2)}`}
+                  </span>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
