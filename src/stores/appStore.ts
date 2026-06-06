@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { loadState, saveState } from '../lib/storage'
-import type { AppState, Sale, Expense, Payable, Receivable, Account, WeekClose, AccountTransfer } from '../types'
+import type { AppState, Sale, Expense, Payable, Receivable, Account, WeekClose, AccountTransfer, Client } from '../types'
 
 interface AppStore extends AppState {
   setBinanceRate: (rate: number) => void
@@ -9,6 +9,13 @@ interface AppStore extends AppState {
   setInventory: (productId: string, flavorId: string, qty: number) => void
   adjustInventory: (productId: string, flavorId: string, delta: number) => void
   getStock: (flavorId: string) => number
+
+  // Clients
+  addClient: (c: Omit<Client, 'id' | 'createdAt'>) => Client
+  updateClient: (id: string, updates: Partial<Client>) => void
+  deleteClient: (id: string) => void
+  getClientSales: (clientId: string) => Sale[]
+  getClientStats: (clientId: string) => { totalSpent: number; totalUnits: number; avgTicket: number; lastProduct: string }
 
   // Custom names
   setCustomName: (id: string, name: string) => void
@@ -106,6 +113,40 @@ export const useAppStore = create<AppStore>((set, get) => {
     getStock: (flavorId) =>
       get().inventory.find((i) => i.flavorId === flavorId)?.quantity ?? 0,
 
+    // ── CLIENTS ──────────────────────────────────
+    addClient: (c) => {
+      const newClient: Client = { ...c, id: uid(), createdAt: new Date().toISOString() }
+      set(state => {
+        const next = { ...state, clients: [newClient, ...state.clients] }
+        saveState(next)
+        return { clients: next.clients }
+      })
+      return newClient
+    },
+
+    updateClient: (id, updates) =>
+      persist(s => ({
+        clients: s.clients.map(c => c.id === id ? { ...c, ...updates } : c),
+      })),
+
+    deleteClient: (id) =>
+      persist(s => ({ clients: s.clients.filter(c => c.id !== id) })),
+
+    getClientSales: (clientId) =>
+      get().sales.filter(s => s.clientId === clientId),
+
+    getClientStats: (clientId) => {
+      const sales = get().sales.filter(s => s.clientId === clientId)
+      const totalSpent = sales.reduce((sum, s) => sum + s.priceUSD * s.quantity, 0)
+      const totalUnits = sales.reduce((sum, s) => sum + s.quantity, 0)
+      const avgTicket  = sales.length > 0 ? totalSpent / sales.length : 0
+      const lastSale   = sales[0]
+      const lastProduct = lastSale
+        ? (get().customNames.find(n => n.id === lastSale.flavorId)?.name ?? lastSale.flavorId)
+        : ''
+      return { totalSpent, totalUnits, avgTicket, lastProduct }
+    },
+
     // ── CUSTOM NAMES ─────────────────────────────
     setCustomName: (id, name) =>
       persist((s) => ({
@@ -141,7 +182,14 @@ export const useAppStore = create<AppStore>((set, get) => {
             )
           }
         }
-        return { sales: [newSale, ...s.sales], inventory: inv, accounts }
+        // Update client lastPurchaseAt
+        let clients = s.clients
+        if (sale.clientId) {
+          clients = s.clients.map(c =>
+            c.id === sale.clientId ? { ...c, lastPurchaseAt: new Date().toISOString() } : c
+          )
+        }
+        return { sales: [newSale, ...s.sales], inventory: inv, accounts, clients }
       }),
 
     updateSale: (id, updates) =>

@@ -14,6 +14,7 @@ export function loadState(): AppState {
         ...parsed,
         transfers:   parsed.transfers   ?? [],
         customNames: parsed.customNames ?? [],
+        clients:     parsed.clients     ?? [],
         accounts:    parsed.accounts    ?? defaults.accounts,
       }
     }
@@ -40,6 +41,7 @@ function defaultState(): AppState {
       { id: 'acc_4', name: 'Binance USDT',  emoji: '🔷', currency: 'USDT',balance: 0, type: 'crypto' },
     ],
     transfers:   [],
+    clients:     [],
     customNames: [],
     inventory:   [],
     sales:       [],

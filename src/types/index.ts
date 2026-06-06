@@ -28,6 +28,21 @@ export interface CustomName {
   name: string
 }
 
+export type ClientTag = 'vip' | 'mayorista' | 'detal' | 'frecuente' | 'nuevo' | 'deudor'
+
+export interface Client {
+  id: string
+  name: string
+  phone?: string
+  instagram?: string
+  zone?: string           // zona/sector
+  tags: ClientTag[]
+  emoji: string
+  notes?: string
+  createdAt: string
+  lastPurchaseAt?: string
+}
+
 export type PaymentMethod = 'cash_usd' | 'zelle' | 'usdt' | 'cash_bs' | 'transfer' | 'pending'
 
 export interface Sale {
@@ -40,7 +55,8 @@ export interface Sale {
   rateBinance: number
   saleType: 'retail' | 'wholesale'
   paymentMethod: PaymentMethod
-  accountId?: string      // which account was credited
+  accountId?: string
+  clientId?: string       // linked customer
   note?: string
   createdAt: string
   weekCloseId?: string
@@ -98,6 +114,7 @@ export interface WeekClose {
 export interface AppState {
   accounts: Account[]
   transfers: AccountTransfer[]
+  clients: Client[]
   inventory: InventoryItem[]
   customNames: CustomName[]
   sales: Sale[]

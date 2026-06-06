@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Package, TrendingUp, DollarSign, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Package, TrendingUp, DollarSign, BarChart3, Users } from 'lucide-react'
 
 const tabs = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Inicio' },
-  { id: 'inventory', icon: Package, label: 'Stock' },
-  { id: 'sales', icon: TrendingUp, label: 'Vender' },
-  { id: 'money', icon: DollarSign, label: 'Plata' },
-  { id: 'closing', icon: BarChart3, label: 'Cierre' },
+  { id: 'inventory', icon: Package,         label: 'Stock' },
+  { id: 'sales',     icon: TrendingUp,      label: 'Vender' },
+  { id: 'clients',   icon: Users,           label: 'Clientes' },
+  { id: 'money',     icon: DollarSign,      label: 'Plata' },
+  { id: 'closing',   icon: BarChart3,       label: 'Cierre' },
 ]
 
 interface Props { active: string; onChange: (id: string) => void }

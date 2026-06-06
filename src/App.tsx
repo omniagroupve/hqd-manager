@@ -8,15 +8,17 @@ import Inventory from './components/inventory/Inventory'
 import SaleFlow from './components/sales/SaleFlow'
 import MoneyScreen from './components/accounts/MoneyScreen'
 import ClosingScreen from './components/closing/ClosingScreen'
+import ClientsScreen from './components/clients/ClientsScreen'
 import BottomNav from './components/layout/BottomNav'
 import Header from './components/layout/Header'
 
 const TAB_TITLES: Record<string, string> = {
   dashboard: '💨 HQD Manager',
   inventory: '📦 Inventario',
-  sales: '💰 Registrar Venta',
-  money: '💳 Mi Plata',
-  closing: '📊 Cierre Semanal',
+  sales:     '💰 Registrar Venta',
+  clients:   '👥 Cartera de Clientes',
+  money:     '💳 Mi Plata',
+  closing:   '📊 Cierre Semanal',
 }
 
 export default function App() {
@@ -57,8 +59,9 @@ export default function App() {
       <main>
         {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
         {tab === 'inventory' && <Inventory />}
-        {tab === 'sales' && <SaleFlow />}
-        {tab === 'money' && <MoneyScreen />}
+        {tab === 'sales'    && <SaleFlow />}
+        {tab === 'clients'  && <ClientsScreen />}
+        {tab === 'money'    && <MoneyScreen />}
         {tab === 'closing' && <ClosingScreen />}
       </main>
       <BottomNav active={tab} onChange={setTab} />

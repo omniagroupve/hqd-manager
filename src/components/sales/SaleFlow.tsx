@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CATALOG, type Product, type Flavor } from '../../data/catalog'
 import { useAppStore } from '../../stores/appStore'
 import type { PaymentMethod } from '../../types'
-import { Check, ChevronLeft, Minus, Plus, History } from 'lucide-react'
+import { Check, ChevronLeft, Minus, Plus, History, X } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import toast from 'react-hot-toast'
 import SalesHistory from './SalesHistory'
 
-type Step = 'product' | 'flavor' | 'qty' | 'payment' | 'success'
+type Step = 'product' | 'flavor' | 'qty' | 'payment' | 'client' | 'success'
 
 const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; emoji: string; currency: string }[] = [
   { id: 'cash_usd',  label: 'Efectivo USD', emoji: '💵', currency: 'USD' },
@@ -29,9 +29,12 @@ export default function SaleFlow() {
   const [payMethod, setPayMethod]   = useState<PaymentMethod>('cash_usd')
   const [accountId, setAccountId]   = useState<string>('')
   const [note, setNote]             = useState('')
-  const [showHistory, setShowHistory] = useState(false)
+  const [showHistory, setShowHistory]   = useState(false)
+  const [clientId, setClientId]         = useState<string>('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [newClientName, setNewClientName] = useState('')
 
-  const { addSale, binanceRate, getStock, accounts, getCustomName } = useAppStore()
+  const { addSale, binanceRate, getStock, accounts, getCustomName, clients, addClient } = useAppStore()
 
   const price   = customPrice ? parseFloat(customPrice) : product?.priceUSD ?? 0
   const priceBs = binanceRate > 0 ? price * binanceRate : 0
@@ -52,16 +55,24 @@ export default function SaleFlow() {
     setStep('product'); setProduct(null); setFlavor(null)
     setQty(1); setCustomPrice(''); setSaleType('retail')
     setPayMethod('cash_usd'); setAccountId(''); setNote('')
+    setClientId(''); setClientSearch(''); setNewClientName('')
   }
 
   function confirmSale() {
     if (!product || !flavor) return
     const selectedAccount = accountId || matchingAccounts[0]?.id
+    // Create new client on-the-fly if typed
+    let finalClientId = clientId
+    if (!finalClientId && newClientName.trim()) {
+      const nc = addClient({ name: newClientName.trim(), tags: [saleType === 'wholesale' ? 'mayorista' : 'detal'], emoji: '👤' })
+      finalClientId = nc.id
+    }
     addSale({
       productId: product.id, flavorId: flavor.id, quantity: qty,
       priceUSD: price, priceBs: priceBs, rateBinance: binanceRate,
       saleType, paymentMethod: payMethod,
       accountId: payMethod !== 'pending' ? selectedAccount : undefined,
+      clientId: finalClientId || undefined,
       note: note || undefined,
     })
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#a78bfa','#06b6d4','#10b981','#f59e0b'] })
@@ -80,7 +91,7 @@ export default function SaleFlow() {
     transition: { duration: 0.22, ease: 'easeOut' as const },
   }
 
-  const steps: Step[] = ['product','flavor','qty','payment']
+  const steps: Step[] = ['product','flavor','qty','payment','client']
   const stepIdx = steps.indexOf(step as any)
 
   if (showHistory) return <SalesHistory onBack={() => setShowHistory(false)} />
@@ -293,10 +304,101 @@ export default function SaleFlow() {
               </div>
             </div>
 
-            <motion.button whileTap={{ scale: 0.97 }} onClick={confirmSale}
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setStep('client')}
               className="btn-primary w-full flex items-center justify-center gap-2">
-              <Check className="w-5 h-5" /> Confirmar — ${total.toFixed(2)}
+              Continuar → Cliente
             </motion.button>
+          </motion.div>
+        )}
+
+        {/* STEP 5: Client */}
+        {step === 'client' && (
+          <motion.div key="client" {...slide}>
+            <button onClick={() => setStep('payment')} className="flex items-center gap-1.5 text-violet-400 text-sm font-medium mb-4">
+              <ChevronLeft className="w-4 h-4" /> Método de pago
+            </button>
+            <h2 className="text-title text-white mb-1">¿Quién compró?</h2>
+            <p className="text-sm text-gray-500 mb-5">Opcional — para tu cartera de clientes</p>
+
+            {/* Search existing */}
+            <input
+              placeholder="🔍 Buscar cliente existente..."
+              value={clientSearch}
+              onChange={e => { setClientSearch(e.target.value); setClientId(''); setNewClientName('') }}
+              className="w-full input mb-3"
+            />
+
+            {/* Existing clients filtered */}
+            {clientSearch.length > 0 && (
+              <div className="space-y-1.5 mb-3 max-h-48 overflow-y-auto">
+                {clients
+                  .filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                  .map(c => {
+                    const isSelected = clientId === c.id
+                    return (
+                      <motion.button key={c.id} whileTap={{ scale: 0.97 }}
+                        onClick={() => { setClientId(c.id); setClientSearch(c.name); setNewClientName('') }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all ${
+                          isSelected ? 'bg-violet-600/30 border border-violet-500/50' : 'card-surface'
+                        }`}>
+                        <span className="text-xl">{c.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white">{c.name}</p>
+                          <div className="flex gap-1 mt-0.5">
+                            {c.tags.map(t => (
+                              <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400">{t}</span>
+                            ))}
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-violet-400 shrink-0" />}
+                      </motion.button>
+                    )
+                  })}
+                {/* Create new if no exact match */}
+                {!clients.find(c => c.name.toLowerCase() === clientSearch.toLowerCase()) && (
+                  <motion.button whileTap={{ scale: 0.97 }}
+                    onClick={() => { setNewClientName(clientSearch); setClientId('') }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all ${
+                      newClientName === clientSearch ? 'bg-emerald-600/20 border border-emerald-500/40' : 'glass'
+                    }`}>
+                    <span className="text-xl">➕</span>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-300">Crear "{clientSearch}"</p>
+                      <p className="text-xs text-gray-500">Nuevo cliente</p>
+                    </div>
+                  </motion.button>
+                )}
+              </div>
+            )}
+
+            {/* Selected client preview */}
+            {(clientId || newClientName) && (
+              <div className="glass-purple rounded-2xl p-3 mb-4 flex items-center gap-3">
+                <span className="text-2xl">{clients.find(c=>c.id===clientId)?.emoji ?? '✨'}</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {clients.find(c=>c.id===clientId)?.name ?? newClientName}
+                  </p>
+                  <p className="text-xs text-violet-300">{newClientName && !clientId ? 'Se creará nuevo cliente' : 'Cliente seleccionado'}</p>
+                </div>
+                <button onClick={() => { setClientId(''); setNewClientName(''); setClientSearch('') }}
+                  className="ml-auto w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                  <X className="w-3 h-3 text-gray-400" />
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={() => confirmSale()}
+                className="flex-1 py-4 rounded-2xl glass text-gray-300 text-sm font-semibold">
+                Omitir
+              </button>
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => confirmSale()}
+                disabled={clientSearch.length > 0 && !clientId && !newClientName}
+                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-40">
+                <Check className="w-4 h-4" /> Confirmar
+              </motion.button>
+            </div>
           </motion.div>
         )}
 
