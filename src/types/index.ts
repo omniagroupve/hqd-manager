@@ -7,11 +7,28 @@ export interface Account {
   type: 'bank' | 'cash' | 'crypto'
 }
 
+export interface AccountTransfer {
+  id: string
+  fromAccountId: string
+  toAccountId: string
+  fromAmount: number
+  toAmount: number
+  note?: string
+  createdAt: string
+}
+
 export interface InventoryItem {
   flavorId: string
   productId: string
   quantity: number
 }
+
+export interface CustomName {
+  id: string        // flavorId or productId
+  name: string
+}
+
+export type PaymentMethod = 'cash_usd' | 'zelle' | 'usdt' | 'cash_bs' | 'transfer' | 'pending'
 
 export interface Sale {
   id: string
@@ -22,6 +39,9 @@ export interface Sale {
   priceBs: number
   rateBinance: number
   saleType: 'retail' | 'wholesale'
+  paymentMethod: PaymentMethod
+  accountId?: string      // which account was credited
+  note?: string
   createdAt: string
   weekCloseId?: string
 }
@@ -32,6 +52,7 @@ export interface Expense {
   amountUSD: number
   amountBs: number
   category: string
+  accountId?: string
   createdAt: string
   weekCloseId?: string
 }
@@ -44,6 +65,8 @@ export interface Payable {
   dueDate: string
   status: 'pending' | 'partial' | 'paid'
   paidAmount: number
+  accountId?: string
+  reminderDays: number   // days before due to remind
   createdAt: string
 }
 
@@ -55,6 +78,7 @@ export interface Receivable {
   dueDate: string
   status: 'pending' | 'partial' | 'paid'
   paidAmount: number
+  accountId?: string
   createdAt: string
 }
 
@@ -73,7 +97,9 @@ export interface WeekClose {
 
 export interface AppState {
   accounts: Account[]
+  transfers: AccountTransfer[]
   inventory: InventoryItem[]
+  customNames: CustomName[]
   sales: Sale[]
   expenses: Expense[]
   payables: Payable[]

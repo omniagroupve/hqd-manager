@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CATALOG } from '../../data/catalog'
 import { useAppStore } from '../../stores/appStore'
-import { Plus, Minus, ChevronRight, Edit3 } from 'lucide-react'
+import { Plus, Minus, ChevronRight, Edit3, Type } from 'lucide-react'
 
 export default function Inventory() {
-  const [expanded, setExpanded] = useState<string | null>(CATALOG[0].id)
-  const [editing, setEditing] = useState<string | null>(null)
-  const [editVal, setEditVal] = useState('')
-  const { getStock, setInventory, adjustInventory } = useAppStore()
+  const [expanded, setExpanded]   = useState<string | null>(CATALOG[0].id)
+  const [editing, setEditing]     = useState<string | null>(null)
+  const [editVal, setEditVal]     = useState('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal]   = useState('')
+  const { getStock, setInventory, adjustInventory, setCustomName, getCustomName } = useAppStore()
 
   const totalUnits = useAppStore(s => s.inventory.reduce((sum, i) => sum + i.quantity, 0))
   const lowCount   = useAppStore(s => s.inventory.filter(i => i.quantity > 0 && i.quantity <= 5).length)
@@ -61,8 +63,22 @@ export default function Inventory() {
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-white text-sm leading-none">{product.name}</p>
+                    {renamingId === product.id ? (
+                      <input autoFocus value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onBlur={() => { setCustomName(product.id, renameVal); setRenamingId(null) }}
+                        onKeyDown={e => { if(e.key==='Enter'){setCustomName(product.id, renameVal); setRenamingId(null)}; e.stopPropagation() }}
+                        className="text-sm font-semibold bg-white/10 text-white px-2 py-0.5 rounded-lg border border-violet-500/50 outline-none w-32" />
+                    ) : (
+                      <p className="font-semibold text-white text-sm leading-none">
+                        {getCustomName(product.id, product.name)}
+                      </p>
+                    )}
                     {hasLow && <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
+                    <button onClick={e => { e.stopPropagation(); setRenamingId(product.id); setRenameVal(getCustomName(product.id, product.name)) }}
+                      className="opacity-30 hover:opacity-80 transition-opacity">
+                      <Type className="w-3 h-3 text-gray-400" />
+                    </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">${product.priceUSD} · {product.flavors.length} sabores</p>
                 </div>
@@ -96,7 +112,9 @@ export default function Inventory() {
                       const pct   = Math.min(stock / 50, 1)
                       const isLow = stock <= 5 && stock > 0
                       const isOut = stock === 0
-                      const isEditThis = editing === flavor.id
+                      const isEditThis   = editing === flavor.id
+                      const isRenaming   = renamingId === flavor.id
+                      const displayName  = getCustomName(flavor.id, flavor.name)
 
                       return (
                         <div
@@ -107,7 +125,18 @@ export default function Inventory() {
                           <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{flavor.emoji}</span>
-                              <span className="text-sm font-medium text-white">{flavor.name}</span>
+                              {isRenaming ? (
+                                <input autoFocus value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                                  onBlur={() => { setCustomName(flavor.id, renameVal); setRenamingId(null) }}
+                                  onKeyDown={e => e.key==='Enter' && (setCustomName(flavor.id, renameVal), setRenamingId(null))}
+                                  className="text-sm font-medium bg-white/10 text-white px-2 py-0.5 rounded-lg border border-violet-500/50 outline-none w-28" />
+                              ) : (
+                                <button onClick={() => { setRenamingId(flavor.id); setRenameVal(displayName) }}
+                                  className="text-sm font-medium text-white text-left flex items-center gap-1 group">
+                                  {displayName}
+                                  <Type className="w-2.5 h-2.5 text-gray-600 opacity-0 group-hover:opacity-80 transition-opacity" />
+                                </button>
+                              )}
                               {isLow && <span className="text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded-full font-medium">BAJO</span>}
                               {isOut && <span className="text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-full font-medium">AGOTADO</span>}
                             </div>
