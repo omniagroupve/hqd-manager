@@ -61,7 +61,7 @@ export default function SalesHistory({ onBack }: Props) {
     .reduce((sum, s) => sum + s.priceUSD * s.quantity, 0)
 
   return (
-    <div className="px-4 pt-2 pb-32">
+    <div className="px-4 pt-2 pb-4">
       <div className="flex items-center gap-3 mb-5">
         <button onClick={onBack} className="w-9 h-9 rounded-2xl glass flex items-center justify-center">
           <ChevronLeft className="w-4 h-4 text-gray-400" />

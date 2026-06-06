@@ -41,7 +41,7 @@ export default function ClosingScreen() {
   const totalProfit = confirmed.reduce((s, c) => s + c.netProfitUSD, 0)
 
   return (
-    <div className="px-4 pt-2 pb-32 space-y-4">
+    <div className="px-4 pt-2 pb-4 space-y-4">
 
       {/* Historical total */}
       {confirmed.length > 0 && (

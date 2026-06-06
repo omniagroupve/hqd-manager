@@ -42,7 +42,7 @@ export default function Dashboard({ onNavigate }: Props) {
   const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } }
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="px-4 pt-2 pb-32 space-y-3">
+    <motion.div variants={stagger} initial="hidden" animate="show" className="px-4 pt-2 pb-4 space-y-3">
 
       {/* ── HERO CARD ─────────────────────────── */}
       <motion.div variants={item} className="card-hero rounded-3xl p-6">

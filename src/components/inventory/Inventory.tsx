@@ -40,7 +40,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className="px-4 pt-2 pb-32 space-y-3">
+    <div className="px-4 pt-2 pb-4 space-y-3">
 
       {/* Summary hero */}
       <div className="card-hero rounded-3xl p-5">

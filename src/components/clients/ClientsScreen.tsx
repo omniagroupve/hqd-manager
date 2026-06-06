@@ -42,7 +42,7 @@ export default function ClientsScreen() {
   if (selected) return <ClientDetail client={selected} onBack={() => setSelected(null)} />
 
   return (
-    <div className="px-4 pt-2 pb-32 space-y-4">
+    <div className="px-4 pt-2 pb-4 space-y-4">
 
       {/* Hero stats */}
       <div className="card-hero rounded-3xl p-5">
@@ -212,7 +212,7 @@ function ClientDetail({ client, onBack }: { client: Client; onBack: () => void }
   }
 
   return (
-    <div className="px-4 pt-2 pb-32 space-y-4">
+    <div className="px-4 pt-2 pb-4 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="w-9 h-9 rounded-2xl glass flex items-center justify-center">

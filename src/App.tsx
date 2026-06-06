@@ -56,7 +56,7 @@ export default function App() {
   return (
     <div className="bg-app min-h-screen max-w-lg mx-auto">
       <Header title={TAB_TITLES[tab]} onLogout={() => setAuthState('login')} />
-      <main>
+      <main className="pb-nav">
         {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
         {tab === 'inventory' && <Inventory />}
         {tab === 'sales'    && <SaleFlow />}

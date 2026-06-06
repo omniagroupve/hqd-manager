@@ -69,7 +69,7 @@ export default function MoneyScreen() {
   })
 
   return (
-    <div className="px-4 pt-2 pb-32 space-y-4 relative">
+    <div className="px-4 pt-2 pb-4 space-y-4 relative">
 
       {/* ── HERO ─────────────────────────────── */}
       <div className="card-hero rounded-3xl p-5">
@@ -124,7 +124,7 @@ export default function MoneyScreen() {
       <div className="flex gap-1 p-1 rounded-2xl bg-white/5">
         {([['accounts', '💳 Cuentas'], ['payables', '📤 Por pagar'], ['receivables', '📥 Por cobrar']] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${tab === t ? 'bg-violet-600 text-white' : 'text-gray-400'}`}>
+            className={`flex-1 py-3 rounded-xl text-xs font-semibold transition-all ${tab === t ? 'bg-violet-600 text-white' : 'text-gray-400'}`}>
             {label}
           </button>
         ))}
@@ -580,7 +580,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-3 gap-2">
           {([['cash', '💵 Efectivo'], ['bank', '🏦 Banco'], ['crypto', '🔷 Cripto']] as const).map(([t, label]) => (
             <button key={t} onClick={() => setType(t)}
-              className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${type === t ? 'bg-violet-600 text-white' : 'glass text-gray-400'}`}>
+              className={`py-3 rounded-xl text-xs font-semibold transition-all ${type === t ? 'bg-violet-600 text-white' : 'glass text-gray-400'}`}>
               {label}
             </button>
           ))}
