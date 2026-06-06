@@ -62,6 +62,9 @@ interface AppStore extends AppState {
   transferBetweenAccounts:  (t: Omit<AccountTransfer, 'id' | 'createdAt'>) => void
   getAccountTransactions:   (accountId: string) => AccountTransaction[]
 
+  // COGS
+  getWeekCOGS: () => number   // costo total de la mercancía vendida esta semana
+
   // Week Close
   createWeekClose:  () => WeekClose
   confirmWeekClose: (id: string) => void
@@ -449,6 +452,19 @@ export const useAppStore = create<AppStore>((set, get) => {
           accountTransactions: [...s.accountTransactions, txFrom, txTo],
         }
       }),
+
+    // ── COGS ─────────────────────────────────────
+    getWeekCOGS: () => {
+      const s = get()
+      const weekStart = getWeekStart()
+      const openSales = s.sales.filter(sale => sale.createdAt >= weekStart && !sale.weekCloseId)
+      let totalCost = 0
+      for (const sale of openSales) {
+        const cost = s.customPrices.find(cp => cp.id === sale.productId)?.cost ?? 0
+        totalCost += cost * sale.quantity
+      }
+      return totalCost
+    },
 
     // ── WEEK CLOSE ───────────────────────────────
     createWeekClose: () => {

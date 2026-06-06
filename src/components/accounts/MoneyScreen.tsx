@@ -509,16 +509,45 @@ function AddAccountModal({ onClose }: { onClose:()=>void }) {
   const [currency, setCurrency] = useState<'USD'|'Bs'|'USDT'>('USD')
   const [type, setType]         = useState<'cash'|'bank'|'crypto'>('cash')
   const [balance, setBalance]   = useState('')
+  const [saved, setSaved]       = useState(false)
   const EMOJIS = ['💵','💴','💸','🏦','🔷','💳','📱','🏧','💰','💎']
 
+  const ACCOUNT_PRESETS = [
+    { name:'Efectivo USD', emoji:'💵', currency:'USD' as const, type:'cash' as const },
+    { name:'Efectivo Bs',  emoji:'💴', currency:'Bs'  as const, type:'cash' as const },
+    { name:'Zelle',        emoji:'💸', currency:'USD' as const, type:'bank' as const },
+    { name:'Binance USDT', emoji:'🔷', currency:'USDT'as const, type:'crypto' as const },
+    { name:'Banco',        emoji:'🏦', currency:'USD' as const, type:'bank' as const },
+    { name:'Pago Móvil',   emoji:'📱', currency:'Bs'  as const, type:'bank' as const },
+  ]
+
   function save() {
-    if (!name) return
-    addAccount({ name, emoji, currency, type, balance: parseFloat(balance)||0 })
-    toast.success('✅ Cuenta agregada'); onClose()
+    if (!name.trim()) return
+    addAccount({ name: name.trim(), emoji, currency, type, balance: parseFloat(balance)||0 })
+    setSaved(true)
+    setTimeout(() => { toast.success(`✅ Cuenta "${name}" creada`); onClose() }, 600)
+  }
+
+  function applyPreset(p: typeof ACCOUNT_PRESETS[0]) {
+    setName(p.name); setEmoji(p.emoji); setCurrency(p.currency); setType(p.type)
   }
 
   return (
     <BottomSheet title="Nueva cuenta" onClose={onClose}>
+      {/* Quick presets */}
+      <div>
+        <p className="text-xs text-gray-500 mb-2">Acceso rápido</p>
+        <div className="flex flex-wrap gap-2">
+          {ACCOUNT_PRESETS.map(p => (
+            <button key={p.name} onClick={() => applyPreset(p)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${name===p.name?'bg-violet-600 text-white':'glass text-gray-400'}`}>
+              {p.emoji} {p.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Emoji picker */}
       <div className="flex gap-2 flex-wrap">
         {EMOJIS.map(e => (
           <button key={e} onClick={() => setEmoji(e)}
@@ -527,23 +556,65 @@ function AddAccountModal({ onClose }: { onClose:()=>void }) {
           </button>
         ))}
       </div>
-      <input placeholder="Nombre de la cuenta" value={name} onChange={e=>setName(e.target.value)} className="w-full input" />
+
+      <input placeholder="Nombre de la cuenta *" value={name}
+        onChange={e=>setName(e.target.value)} className="w-full input" autoFocus />
+
       <div className="grid grid-cols-3 gap-2">
         {(['USD','Bs','USDT'] as const).map(c => (
           <button key={c} onClick={() => setCurrency(c)}
-            className={`py-2.5 rounded-xl text-sm font-semibold ${currency===c?'bg-violet-600 text-white':'glass text-gray-400'}`}>{c}</button>
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {(['cash','bank','crypto'] as const).map(t => (
-          <button key={t} onClick={() => setType(t)}
-            className={`py-2.5 rounded-xl text-xs font-semibold ${type===t?'bg-violet-600 text-white':'glass text-gray-400'}`}>
-            {t==='cash'?'Efectivo':t==='bank'?'Banco':'Cripto'}
+            className={`py-3 rounded-xl text-sm font-bold transition-all ${currency===c?'bg-violet-600 text-white shadow-lg shadow-violet-900/40':'glass text-gray-400'}`}>
+            {c}
           </button>
         ))}
       </div>
-      <input type="number" inputMode="decimal" placeholder="Saldo inicial" value={balance} onChange={e=>setBalance(e.target.value)} className="w-full input" />
-      <button onClick={save} className="btn-primary w-full">Guardar cuenta</button>
+
+      <div className="grid grid-cols-3 gap-2">
+        {([['cash','💵 Efectivo'],['bank','🏦 Banco'],['crypto','🔷 Cripto']] as const).map(([t,label]) => (
+          <button key={t} onClick={() => setType(t)}
+            className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${type===t?'bg-violet-600 text-white':'glass text-gray-400'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500 mb-1">Saldo inicial (opcional)</p>
+        <div className="flex items-center gap-2 input">
+          <span className="text-gray-500">{currency === 'Bs' ? 'Bs' : '$'}</span>
+          <input type="number" inputMode="decimal" placeholder="0.00" value={balance}
+            onChange={e=>setBalance(e.target.value)}
+            className="flex-1 bg-transparent text-white font-bold outline-none" />
+        </div>
+      </div>
+
+      {/* Preview card */}
+      {name && (
+        <div className="glass-purple rounded-2xl p-3 flex items-center gap-3">
+          <span className="text-3xl">{emoji}</span>
+          <div>
+            <p className="font-bold text-white">{name}</p>
+            <p className="text-xs text-gray-400">
+              {currency} · {type === 'cash' ? 'Efectivo' : type === 'bank' ? 'Banco' : 'Cripto'}
+              {balance ? ` · ${currency === 'Bs' ? 'Bs ' : '$'}${parseFloat(balance).toFixed(2)}` : ''}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={save}
+        disabled={!name.trim() || saved}
+        className={`w-full py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 ${
+          saved
+            ? 'bg-emerald-600'
+            : name.trim()
+            ? 'btn-primary'
+            : 'bg-white/10 text-gray-500 cursor-not-allowed'
+        }`}>
+        {saved ? '✅ ¡Guardado!' : '✓ Crear cuenta'}
+      </motion.button>
     </BottomSheet>
   )
 }

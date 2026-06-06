@@ -10,15 +10,17 @@ import AnimatedNumber from '../dashboard/AnimatedNumber'
 import RingKPI from '../dashboard/RingKPI'
 
 export default function ClosingScreen() {
-  const { weekCloses, createWeekClose, confirmWeekClose, getSalesThisWeek, expenses, binanceRate } = useAppStore()
+  const { weekCloses, createWeekClose, confirmWeekClose, getSalesThisWeek, getWeekCOGS, expenses, binanceRate } = useAppStore()
   const [showExpense, setShowExpense]   = useState(false)
   const [draftId, setDraftId]           = useState<string | null>(null)
 
   const openSales    = getSalesThisWeek()
   const openExpenses = expenses.filter(e => !e.weekCloseId)
   const revenue      = openSales.reduce((s, sale) => s + sale.priceUSD * sale.quantity, 0)
+  const cogs         = getWeekCOGS()                      // costo mercancía vendida
   const expTotal     = openExpenses.reduce((s, e) => s + e.amountUSD, 0)
-  const profit       = revenue - expTotal
+  const grossProfit  = revenue - cogs                     // ganancia bruta
+  const profit       = revenue - cogs - expTotal          // ganancia NETA real
   const units        = openSales.reduce((s, s2) => s + s2.quantity, 0)
   const margin       = revenue > 0 ? (profit / revenue) * 100 : 0
 
@@ -61,11 +63,39 @@ export default function ClosingScreen() {
         </div>
 
         {/* KPI grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <RingKPI label="VENTAS" value={revenue} prefix="$" pct={Math.min(revenue / 1000, 1)} color="#8b5cf6" />
-          <RingKPI label="GASTOS" value={expTotal} prefix="$" pct={Math.min(expTotal / 500, 1)} color="#ef4444" />
-          <RingKPI label={profit >= 0 ? 'GANANCIA' : 'PÉRDIDA'} value={Math.abs(profit)} prefix="$"
+          <RingKPI label={profit >= 0 ? 'GANANCIA NETA' : 'PÉRDIDA'} value={Math.abs(profit)} prefix="$"
             pct={Math.min(Math.abs(profit) / 800, 1)} color={profit >= 0 ? '#10b981' : '#ef4444'} />
+        </div>
+        {/* Cost breakdown */}
+        <div className="glass rounded-2xl p-3 mb-3 space-y-1.5">
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-400">💰 Ventas brutas</span>
+            <span className="text-white font-semibold num">${revenue.toFixed(2)}</span>
+          </div>
+          {cogs > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">📦 Costo mercancía (COGS)</span>
+              <span className="text-orange-400 font-semibold num">−${cogs.toFixed(2)}</span>
+            </div>
+          )}
+          {cogs > 0 && (
+            <div className="flex justify-between text-xs border-t border-white/5 pt-1.5">
+              <span className="text-gray-400">📊 Ganancia bruta</span>
+              <span className="text-violet-300 font-semibold num">${grossProfit.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-400">🧾 Gastos operacionales</span>
+            <span className="text-red-400 font-semibold num">−${expTotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm border-t border-white/10 pt-2 mt-1">
+            <span className="text-white font-bold">✅ GANANCIA NETA</span>
+            <span className={`font-black num text-base ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              ${profit.toFixed(2)}
+            </span>
+          </div>
         </div>
 
         {/* Margin bar */}
@@ -158,14 +188,16 @@ export default function ClosingScreen() {
             className="glass-purple rounded-3xl p-5"
           >
             <p className="text-caption text-purple-300/70 mb-4">CONFIRMAR CIERRE</p>
-            <div className="space-y-3 mb-5">
-              <Row label="Ventas brutas"   value={`$${draft.totalSalesUSD.toFixed(2)}`} color="text-white" />
-              <Row label="Gastos"          value={`-$${draft.totalExpensesUSD.toFixed(2)}`} color="text-red-400" />
+            <div className="space-y-2.5 mb-5">
+              <Row label="💰 Ventas brutas"    value={`$${draft.totalSalesUSD.toFixed(2)}`}  color="text-white" />
+              {cogs > 0 && <Row label="📦 Costo mercancía"  value={`-$${cogs.toFixed(2)}`}          color="text-orange-400" />}
+              {cogs > 0 && <Row label="📊 Ganancia bruta"   value={`$${(draft.totalSalesUSD - cogs).toFixed(2)}`} color="text-violet-300" />}
+              <Row label="🧾 Gastos"           value={`-$${draft.totalExpensesUSD.toFixed(2)}`} color="text-red-400" />
               <div className="h-px bg-white/10" />
-              <Row label="UTILIDAD NETA"   value={`$${draft.netProfitUSD.toFixed(2)}`}
-                color={draft.netProfitUSD >= 0 ? 'text-emerald-400 text-xl font-black num' : 'text-red-400 text-xl font-black num'} />
+              <Row label="✅ GANANCIA NETA"     value={`$${(draft.netProfitUSD - cogs).toFixed(2)}`}
+                color={(draft.netProfitUSD - cogs) >= 0 ? 'text-emerald-400 text-xl font-black num' : 'text-red-400 text-xl font-black num'} />
               {binanceRate > 0 && (
-                <Row label="En Bolívares" value={`Bs ${(draft.netProfitUSD * binanceRate).toLocaleString('es-VE', { maximumFractionDigits: 0 })}`} color="text-purple-300 num" />
+                <Row label="En Bolívares" value={`Bs ${((draft.netProfitUSD - cogs) * binanceRate).toLocaleString('es-VE', { maximumFractionDigits: 0 })}`} color="text-purple-300 num" />
               )}
             </div>
             <div className="flex gap-2">
@@ -225,15 +257,27 @@ function Row({ label, value, color }: { label: string; value: string; color: str
 }
 
 function ExpenseModal({ onClose }: { onClose: () => void }) {
-  const { addExpense } = useAppStore()
-  const [desc, setDesc]       = useState('')
-  const [amount, setAmount]   = useState('')
+  const { addExpense, accounts, binanceRate } = useAppStore()
+  const [desc, setDesc]         = useState('')
+  const [amount, setAmount]     = useState('')
+  const [amountBs, setAmountBs] = useState('')
   const [category, setCategory] = useState('Insumos')
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
   const cats = ['Insumos','Transporte','Servicios','Alquiler','Personal','Otro']
+
+  const selectedAccount = accounts.find(a => a.id === accountId)
+  const amountNum = parseFloat(amount) || 0
+  const amountBsNum = parseFloat(amountBs) || (binanceRate > 0 && selectedAccount?.currency === 'Bs' ? amountNum * binanceRate : 0)
 
   function save() {
     if (!desc || !amount) return
-    addExpense({ description: desc, amountUSD: parseFloat(amount), amountBs: 0, category })
+    addExpense({
+      description: desc,
+      amountUSD: amountNum,
+      amountBs: amountBsNum,
+      category,
+      accountId: accountId || undefined,
+    })
     onClose()
   }
 
@@ -242,33 +286,99 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-end justify-center"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
+      onClick={onClose}>
       <motion.div
         initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onClick={e => e.stopPropagation()}
         className="w-full max-w-lg rounded-t-3xl p-6 pb-10 space-y-4"
-        style={{ background: '#111120', border: '1px solid rgba(255,255,255,0.08)', borderBottom: 'none' }}
-      >
+        style={{ background: '#111120', border: '1px solid rgba(255,255,255,0.08)', borderBottom: 'none' }}>
+
         <div className="flex justify-between items-center">
           <h3 className="text-headline text-white">Registrar gasto</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
             <X className="w-4 h-4 text-gray-400" />
           </button>
         </div>
-        <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descripción del gasto" className="w-full input" />
-        <input type="number" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Monto en USD" className="w-full input" />
-        <div className="flex flex-wrap gap-2">
-          {cats.map(c => (
-            <button key={c} onClick={() => setCategory(c)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${category === c ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400'}`}>
-              {c}
-            </button>
-          ))}
+
+        <input value={desc} onChange={e => setDesc(e.target.value)}
+          placeholder="Descripción del gasto" className="w-full input" autoFocus />
+
+        {/* Amount */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Monto USD</p>
+            <div className="flex items-center gap-1 input">
+              <span className="text-gray-500">$</span>
+              <input type="number" inputMode="decimal" value={amount}
+                onChange={e => setAmount(e.target.value)}
+                className="flex-1 bg-transparent text-white font-bold outline-none" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Monto Bs (opcional)</p>
+            <div className="flex items-center gap-1 input">
+              <span className="text-gray-500 text-xs">Bs</span>
+              <input type="number" inputMode="decimal" value={amountBs}
+                placeholder={binanceRate > 0 ? (amountNum * binanceRate).toFixed(0) : '0'}
+                onChange={e => setAmountBs(e.target.value)}
+                className="flex-1 bg-transparent text-white font-bold outline-none" />
+            </div>
+          </div>
         </div>
+
+        {/* Category */}
+        <div>
+          <p className="text-xs text-gray-500 mb-2">Categoría</p>
+          <div className="flex flex-wrap gap-2">
+            {cats.map(c => (
+              <button key={c} onClick={() => setCategory(c)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${category === c ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400'}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Account (payment method) */}
+        <div>
+          <p className="text-xs text-gray-500 mb-2">💳 Pagar con (cuenta a debitar)</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setAccountId('')}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${!accountId ? 'bg-gray-600 text-white' : 'glass text-gray-400'}`}>
+              Sin cuenta
+            </button>
+            {accounts.map(a => (
+              <button key={a.id} onClick={() => setAccountId(a.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${accountId === a.id ? 'bg-violet-600 text-white' : 'glass text-gray-400'}`}>
+                <span>{a.emoji}</span>
+                <span>{a.name}</span>
+                <span className="opacity-60 num">
+                  {a.currency === 'Bs'
+                    ? `Bs ${a.balance.toFixed(0)}`
+                    : `$${a.balance.toFixed(2)}`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview */}
+        {accountId && amountNum > 0 && selectedAccount && (
+          <div className="glass-red rounded-2xl p-3 flex items-center gap-2">
+            <span className="text-lg">💸</span>
+            <p className="text-sm text-red-300">
+              Se debitará <span className="font-bold num">
+                {selectedAccount.currency === 'Bs'
+                  ? `Bs ${(amountBsNum || amountNum * (binanceRate||1)).toFixed(0)}`
+                  : `$${amountNum.toFixed(2)}`}
+              </span> de <span className="font-bold">{selectedAccount.emoji} {selectedAccount.name}</span>
+            </p>
+          </div>
+        )}
+
         <motion.button whileTap={{ scale: 0.97 }} onClick={save} className="btn-primary w-full">
-          Guardar gasto
+          ✓ Guardar gasto
         </motion.button>
       </motion.div>
     </motion.div>

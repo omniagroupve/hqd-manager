@@ -9,7 +9,7 @@ import RingKPI from './RingKPI'
 interface Props { onNavigate: (tab: string) => void }
 
 export default function Dashboard({ onNavigate }: Props) {
-  const { accounts, binanceRate, payables, receivables, getSalesThisWeek, inventory, expenses, weekCloses } = useAppStore()
+  const { accounts, binanceRate, payables, receivables, getSalesThisWeek, getWeekCOGS, inventory, expenses, weekCloses } = useAppStore()
 
   const totalUSD = accounts.filter(a => a.currency === 'USD' || a.currency === 'USDT').reduce((s, a) => s + a.balance, 0)
   const totalBs  = accounts.filter(a => a.currency === 'Bs').reduce((s, a) => s + a.balance, 0)
@@ -18,8 +18,9 @@ export default function Dashboard({ onNavigate }: Props) {
 
   const salesThisWeek  = getSalesThisWeek()
   const weekRevenue    = salesThisWeek.reduce((s, sale) => s + sale.priceUSD * sale.quantity, 0)
+  const weekCOGS       = getWeekCOGS()
   const weekExpenses   = expenses.filter(e => !e.weekCloseId).reduce((s, e) => s + e.amountUSD, 0)
-  const weekProfit     = weekRevenue - weekExpenses
+  const weekProfit     = weekRevenue - weekCOGS - weekExpenses   // ganancia neta real
   const weekUnits      = salesThisWeek.reduce((s, sale) => s + sale.quantity, 0)
 
   const lastClose = weekCloses.find(c => c.status === 'confirmed')
